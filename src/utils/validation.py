@@ -20,17 +20,32 @@ def validate_request(schema_class):
     """
     Decorator to validate request data against a marshmallow schema
     """
+
     def decorator(f):
         @wraps(f)
         def decorated(*args, **kwargs):
             schema = schema_class()
             try:
-                validated_data = schema.load(request.json or {})
+                payload = request.get_json(silent=True)
+
+                if payload is None:
+                    # Distinguish between "no body provided" and "malformed JSON"
+                    if (
+                        request.mimetype == 'application/json'
+                        and request.content_length
+                        and request.content_length > 0
+                    ):
+                        return jsonify({'errors': {'json': ['Invalid JSON payload']}}), 400
+                    payload = {}
+
+                validated_data = schema.load(payload)
                 request.validated_data = validated_data
                 return f(*args, **kwargs)
             except ValidationError as err:
                 return jsonify({'errors': err.messages}), 400
+
         return decorated
+
     return decorator
 
 
@@ -128,18 +143,16 @@ class TaskShareSchema(Schema):
     emails = fields.List(
         fields.Email(),
         validate=validate.Length(min=0, max=50),
-        missing=[]
+        load_default=list
     )
     permission = fields.Str(
         validate=validate.OneOf(['view', 'edit', 'admin']),
-        missing='view'
+        load_default='view'
     )
     expires_in_days = fields.Int(
         validate=validate.Range(min=1, max=365),
-        missing=30
+        load_default=30
     )
-    status = fields.Str(validate=validate.OneOf(['todo', 'in-progress', 'done']))
-    notes = fields.Str(validate=validate.Length(max=1000))
 
 
 class EmailInviteSchema(Schema):
@@ -148,7 +161,14 @@ class EmailInviteSchema(Schema):
     task_id = fields.Int(required=True, error_messages={'required': 'Task ID is required'})
     permission = fields.Str(
         validate=validate.OneOf(['view', 'edit', 'admin']),
-        missing='view'
+        load_default='view'
     )
     message = fields.Str(validate=validate.Length(max=500))
+
+
+class SharedTaskUpdateSchema(Schema):
+    """Schema for updates to tasks via shared links"""
+
+    status = fields.Str(validate=validate.OneOf(['todo', 'in-progress', 'done']))
+    description = fields.Str(validate=validate.Length(max=1000))
 
