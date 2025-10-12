@@ -138,8 +138,6 @@ class TaskShareSchema(Schema):
         validate=validate.Range(min=1, max=365),
         missing=30
     )
-    status = fields.Str(validate=validate.OneOf(['todo', 'in-progress', 'done']))
-    notes = fields.Str(validate=validate.Length(max=1000))
 
 
 class EmailInviteSchema(Schema):
@@ -151,4 +149,11 @@ class EmailInviteSchema(Schema):
         missing='view'
     )
     message = fields.Str(validate=validate.Length(max=500))
+
+
+class SharedTaskUpdateSchema(Schema):
+    """Schema for updates to tasks via shared links"""
+
+    status = fields.Str(validate=validate.OneOf(['todo', 'in-progress', 'done']))
+    description = fields.Str(validate=validate.Length(max=1000))
 
