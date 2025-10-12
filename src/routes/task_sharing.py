@@ -2,7 +2,11 @@ from flask import Blueprint, request, jsonify
 import secrets
 import string
 from datetime import datetime, timedelta
+from urllib.parse import urljoin
+
 from flask_jwt_extended import get_jwt_identity
+from sqlalchemy.exc import IntegrityError
+
 from ..models.models import db, Task, User, TaskShare
 from ..middleware.auth import token_required
 from ..utils.validation import (
@@ -18,6 +22,14 @@ from email.mime.multipart import MIMEMultipart
 import os
 
 task_sharing_bp = Blueprint('task_sharing', __name__)
+
+
+def build_share_link(share_token: str) -> str:
+    """Generate an absolute share link from the configured frontend URL."""
+    base_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+    normalized_base = base_url.rstrip('/') + '/'
+    return urljoin(normalized_base, f'task/{share_token}')
+
 
 def generate_share_token(length=32, max_attempts=5):
     """Generate a secure, unique random token for task sharing"""
@@ -157,6 +169,7 @@ def share_task():
             seen_emails = set()
             unique_emails = []
             for email in emails:
+                email = email.strip()
                 key = email.lower()
                 if key not in seen_emails:
                     seen_emails.add(key)
@@ -174,38 +187,61 @@ def share_task():
         if current_user.id not in {task.assignee_id, task.supervisor_id}:
             raise APIError('You do not have permission to share this task', 403)
         
-        # Generate unique share token
-        share_token = generate_share_token()
-        
         # Calculate expiration date
         expires_at = datetime.utcnow() + timedelta(days=expires_in_days)
-        
-        # Create task share record
-        task_share = TaskShare(
-            task_id=task_id,
-            shared_by=current_user.id,
-            share_token=share_token,
-            permission=permission,
-            expires_at=expires_at
-        )
-        
-        db.session.add(task_share)
-        db.session.commit()
-        
+
+        # Create task share record with retry protection for race conditions
+        task_share = None
+        max_persist_attempts = 5
+        for attempt in range(max_persist_attempts):
+            share_token = generate_share_token()
+            task_share = TaskShare(
+                task_id=task_id,
+                shared_by=current_user.id,
+                share_token=share_token,
+                permission=permission,
+                expires_at=expires_at
+            )
+
+            db.session.add(task_share)
+            try:
+                db.session.commit()
+                break
+            except IntegrityError:
+                db.session.rollback()
+                if attempt == max_persist_attempts - 1:
+                    raise APIError('Unable to generate unique share token', 500)
+            except Exception:
+                db.session.rollback()
+                raise
+
+        if not task_share:
+            raise APIError('Unable to generate unique share token', 500)
+
+        # Refresh expiration in case the database altered it
+        expires_at = task_share.expires_at
+
         # Generate share link
-        base_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
-        share_link = f"{base_url}/task/{share_token}"
-        
+        share_link = build_share_link(task_share.share_token)
+
+        sender_display_name = sanitize_string(current_user.name) if current_user and current_user.name else None
+        if not sender_display_name:
+            fallback_identity = current_user.email if current_user and current_user.email else 'Alex AI Workspace user'
+            sender_display_name = sanitize_string(fallback_identity)
+
+        raw_task_title = task.title or 'Task'
+        sanitized_task_title = sanitize_string(raw_task_title)
+
         # Send email invitations
         sent_emails = []
         failed_emails = []
-        
+
         for email in emails:
             success = send_task_invitation_email(
                 recipient_email=email,
-                task_title=task.title,
+                task_title=sanitized_task_title,
                 share_link=share_link,
-                sender_name=current_user.name
+                sender_name=sender_display_name
             )
             if success:
                 sent_emails.append(email)
@@ -214,7 +250,7 @@ def share_task():
         
         return jsonify({
             'message': 'Task shared successfully',
-            'share_token': share_token,
+            'share_token': task_share.share_token,
             'share_link': share_link,
             'permission': permission,
             'expires_at': expires_at.isoformat(),
@@ -408,14 +444,17 @@ def list_task_shares(task_id):
         if current_user.id not in {task.assignee_id, task.supervisor_id}:
             raise APIError('You do not have permission to view shares for this task', 403)
         
-        shares = TaskShare.query.filter_by(task_id=task_id).all()
-        
-        base_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
-        
+        shares = (
+            TaskShare.query
+            .filter_by(task_id=task_id)
+            .order_by(TaskShare.created_at.desc())
+            .all()
+        )
+
         return jsonify({
             'shares': [{
                 'share_token': share.share_token,
-                'share_link': f"{base_url}/task/{share.share_token}",
+                'share_link': build_share_link(share.share_token),
                 'permission': share.permission,
                 'created_at': share.created_at.isoformat() if share.created_at else None,
                 'expires_at': share.expires_at.isoformat() if share.expires_at else None,
