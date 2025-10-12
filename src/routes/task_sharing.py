@@ -1,11 +1,15 @@
 from flask import Blueprint, request, jsonify
-from functools import wraps
 import secrets
 import string
 from datetime import datetime, timedelta
+from flask_jwt_extended import get_jwt_identity
 from ..models.models import db, Task, User, TaskShare
 from ..middleware.auth import token_required
-from ..utils.validation import validate_request, TaskShareSchema, EmailInviteSchema
+from ..utils.validation import (
+    validate_request,
+    TaskShareSchema,
+    SharedTaskUpdateSchema,
+)
 from ..utils.errors import APIError, ValidationError
 import smtplib
 from email.mime.text import MIMEText
@@ -126,11 +130,19 @@ def send_task_invitation_email(recipient_email, task_title, share_link, sender_n
 
 @task_sharing_bp.route('/share', methods=['POST'])
 @token_required
-@validate_request(TaskShareSchema())
-def share_task(current_user):
+@validate_request(TaskShareSchema)
+def share_task():
     """Create a shareable link for a task and optionally send email invitations"""
     try:
-        data = request.get_json()
+        user_id = get_jwt_identity()
+        if not user_id:
+            raise APIError('Authentication required', 401)
+
+        current_user = User.query.get(user_id)
+        if not current_user:
+            raise APIError('User not found', 401)
+
+        data = getattr(request, 'validated_data', None) or request.get_json() or {}
         task_id = data.get('task_id')
         emails = data.get('emails', [])  # List of email addresses
         permission = data.get('permission', 'view')  # view, edit, or admin
@@ -142,7 +154,7 @@ def share_task(current_user):
             raise APIError('Task not found', 404)
         
         # Check if user has permission to share
-        if task.created_by != current_user.id:
+        if current_user.id not in {task.assignee_id, task.supervisor_id}:
             raise APIError('You do not have permission to share this task', 403)
         
         # Generate unique share token
@@ -235,15 +247,15 @@ def access_shared_task(share_token):
                 'title': task.title,
                 'description': task.description,
                 'status': task.status,
-                'priority': task.priority,
-                'due_date': task.due_date.isoformat() if task.due_date else None,
-                'created_at': task.created_at.isoformat(),
-                'updated_at': task.updated_at.isoformat()
+                'urgent': task.urgent,
+                'deadline': task.deadline.isoformat() if task.deadline else None,
+                'created_at': task.created_at.isoformat() if task.created_at else None,
+                'updated_at': task.updated_at.isoformat() if task.updated_at else None
             },
             'share_info': {
                 'permission': task_share.permission,
                 'shared_by': shared_by_user.name if shared_by_user else 'Unknown',
-                'shared_at': task_share.created_at.isoformat(),
+                'shared_at': task_share.created_at.isoformat() if task_share.created_at else None,
                 'expires_at': task_share.expires_at.isoformat() if task_share.expires_at else None,
                 'access_count': task_share.access_count
             }
@@ -255,15 +267,18 @@ def access_shared_task(share_token):
         raise APIError(f'Error accessing shared task: {str(e)}', 500)
 
 @task_sharing_bp.route('/update/<share_token>', methods=['PUT'])
-@validate_request(TaskShareSchema())
+@validate_request(SharedTaskUpdateSchema)
 def update_shared_task(share_token):
     """Update a shared task (requires edit or admin permission)"""
     try:
-        data = request.get_json()
-        
+        data = getattr(request, 'validated_data', None) or {}
+
+        if not data:
+            raise ValidationError('No update fields provided')
+
         # Find the task share
         task_share = TaskShare.query.filter_by(share_token=share_token).first()
-        
+
         if not task_share or task_share.revoked:
             raise APIError('Invalid or revoked share link', 403)
         
@@ -280,19 +295,21 @@ def update_shared_task(share_token):
             raise APIError('Task not found', 404)
         
         # Update allowed fields
+        updated = False
+
         if 'status' in data:
             task.status = data['status']
-        if 'description' in data and task_share.permission == 'admin':
+            updated = True
+
+        if 'description' in data:
+            if task_share.permission != 'admin':
+                raise APIError('You do not have permission to edit this task description', 403)
             task.description = data['description']
-        if 'notes' in data:
-            if not task.notes:
-                task.notes = []
-            task.notes.append({
-                'content': data['notes'],
-                'added_at': datetime.utcnow().isoformat(),
-                'added_via': 'shared_link'
-            })
-        
+            updated = True
+
+        if not updated:
+            raise ValidationError('No valid fields to update')
+
         task.updated_at = datetime.utcnow()
         db.session.commit()
         
@@ -303,7 +320,7 @@ def update_shared_task(share_token):
                 'title': task.title,
                 'description': task.description,
                 'status': task.status,
-                'updated_at': task.updated_at.isoformat()
+                'updated_at': task.updated_at.isoformat() if task.updated_at else None
             }
         }), 200
         
@@ -314,21 +331,29 @@ def update_shared_task(share_token):
 
 @task_sharing_bp.route('/revoke/<share_token>', methods=['DELETE'])
 @token_required
-def revoke_share(current_user, share_token):
+def revoke_share(share_token):
     """Revoke a share link"""
     try:
+        user_id = get_jwt_identity()
+        if not user_id:
+            raise APIError('Authentication required', 401)
+
+        current_user = User.query.get(user_id)
+        if not current_user:
+            raise APIError('User not found', 401)
+
         task_share = TaskShare.query.filter_by(share_token=share_token).first()
-        
+
         if not task_share:
             raise APIError('Share link not found', 404)
-        
+
         # Check if user has permission to revoke
         if task_share.shared_by != current_user.id:
             raise APIError('You do not have permission to revoke this share link', 403)
-        
+
         task_share.revoked = True
         db.session.commit()
-        
+
         return jsonify({
             'message': 'Share link revoked successfully'
         }), 200
@@ -340,14 +365,22 @@ def revoke_share(current_user, share_token):
 
 @task_sharing_bp.route('/list/<int:task_id>', methods=['GET'])
 @token_required
-def list_task_shares(current_user, task_id):
+def list_task_shares(task_id):
     """List all share links for a task"""
     try:
+        user_id = get_jwt_identity()
+        if not user_id:
+            raise APIError('Authentication required', 401)
+
+        current_user = User.query.get(user_id)
+        if not current_user:
+            raise APIError('User not found', 401)
+
         task = Task.query.get(task_id)
         if not task:
             raise APIError('Task not found', 404)
-        
-        if task.created_by != current_user.id:
+
+        if current_user.id not in {task.assignee_id, task.supervisor_id}:
             raise APIError('You do not have permission to view shares for this task', 403)
         
         shares = TaskShare.query.filter_by(task_id=task_id).all()
@@ -359,7 +392,7 @@ def list_task_shares(current_user, task_id):
                 'share_token': share.share_token,
                 'share_link': f"{base_url}/task/{share.share_token}",
                 'permission': share.permission,
-                'created_at': share.created_at.isoformat(),
+                'created_at': share.created_at.isoformat() if share.created_at else None,
                 'expires_at': share.expires_at.isoformat() if share.expires_at else None,
                 'access_count': share.access_count,
                 'last_accessed': share.last_accessed.isoformat() if share.last_accessed else None,
