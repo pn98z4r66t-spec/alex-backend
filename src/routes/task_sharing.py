@@ -126,11 +126,11 @@ def send_task_invitation_email(recipient_email, task_title, share_link, sender_n
 
 @task_sharing_bp.route('/share', methods=['POST'])
 @token_required
-@validate_request(TaskShareSchema())
+@validate_request(TaskShareSchema)
 def share_task(current_user):
     """Create a shareable link for a task and optionally send email invitations"""
     try:
-        data = request.get_json()
+        data = getattr(request, 'validated_data', None) or request.get_json() or {}
         task_id = data.get('task_id')
         emails = data.get('emails', [])  # List of email addresses
         permission = data.get('permission', 'view')  # view, edit, or admin
@@ -142,7 +142,7 @@ def share_task(current_user):
             raise APIError('Task not found', 404)
         
         # Check if user has permission to share
-        if task.created_by != current_user.id:
+        if current_user.id not in {task.assignee_id, task.supervisor_id}:
             raise APIError('You do not have permission to share this task', 403)
         
         # Generate unique share token
