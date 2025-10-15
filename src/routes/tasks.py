@@ -66,7 +66,7 @@ def get_tasks(current_user_id=None):
 
 @tasks_bp.route('/tasks/<int:task_id>', methods=['GET'])
 @token_required
-def get_task(current_user_id=None, task_id):
+def get_task(task_id, current_user_id=None):
     """
     Get specific task by ID
     ---
@@ -133,7 +133,7 @@ def create_task(current_user_id=None):
 
 @tasks_bp.route('/tasks/<int:task_id>', methods=['PUT'])
 @token_required
-def update_task(current_user_id=None, task_id):
+def update_task(task_id, current_user_id=None):
     """
     Update an existing task
     ---
@@ -205,7 +205,7 @@ def update_task(current_user_id=None, task_id):
 
 @tasks_bp.route('/tasks/<int:task_id>', methods=['DELETE'])
 @token_required
-def delete_task(current_user_id=None, task_id):
+def delete_task(task_id, current_user_id=None):
     """
     Delete a task
     ---

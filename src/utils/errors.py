@@ -20,6 +20,7 @@ class APIError(Exception):
         self.payload = payload
     
     def to_dict(self):
+        """Convert error to dictionary for JSON response"""
         rv = dict(self.payload or ())
         rv['error'] = self.message
         rv['status_code'] = self.status_code

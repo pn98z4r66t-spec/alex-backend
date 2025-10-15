@@ -425,17 +425,23 @@ def ai_analyze_file(file_id, current_user):
         
         prompt = prompts.get(analysis_type, prompts['summary'])
         
-        # Call AI API
-        response = requests.post(
-            ai_api_url,
-            json={'model': ai_model, 'prompt': prompt, 'stream': False},
-            timeout=30
-        )
-        
-        if response.status_code == 200:
+        # Call AI API with proper error handling
+        try:
+            response = requests.post(
+                ai_api_url,
+                json={'model': ai_model, 'prompt': prompt, 'stream': False},
+                timeout=30
+            )
+            response.raise_for_status()
             ai_response = response.json().get('response', 'No response from AI')
-        else:
-            ai_response = f"AI analysis unavailable (using fallback)"
+        except requests.exceptions.Timeout:
+            ai_response = "AI analysis timed out. Please try again."
+        except requests.exceptions.ConnectionError:
+            ai_response = "AI service unavailable. Please ensure Ollama is running."
+        except requests.exceptions.HTTPError as e:
+            ai_response = f"AI service error: {e.response.status_code}"
+        except requests.exceptions.RequestException as e:
+            ai_response = f"AI analysis failed: {str(e)}"
         
         return jsonify({
             'file_id': file_id,

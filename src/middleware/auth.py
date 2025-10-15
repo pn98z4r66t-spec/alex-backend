@@ -13,6 +13,7 @@ def token_required(f):
     """
     @wraps(f)
     def decorated(*args, **kwargs):
+        """Wrapper function that verifies JWT and injects user_id"""
         try:
             verify_jwt_in_request()
             # Get user ID and convert to int if it's a string
@@ -38,6 +39,7 @@ def optional_token(f):
     """
     @wraps(f)
     def decorated(*args, **kwargs):
+        """Wrapper function that optionally verifies JWT"""
         from ..models.models import User
         current_user = None
         try:

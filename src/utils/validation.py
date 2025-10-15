@@ -21,8 +21,10 @@ def validate_request(schema_class):
     Decorator to validate request data against a marshmallow schema
     """
     def decorator(f):
+        """Decorator wrapper that applies schema validation"""
         @wraps(f)
         def decorated(*args, **kwargs):
+            """Inner function that validates request data"""
             schema = schema_class()
             try:
                 validated_data = schema.load(request.json or {})

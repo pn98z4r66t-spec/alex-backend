@@ -17,6 +17,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 from src.config.config import config
+from src.config.env_validator import validate_environment
 from src.models.models import db, User, Task, Email, ReferenceFile, Message
 from src.routes.auth import auth_bp
 from src.routes.tasks import tasks_bp
@@ -27,6 +28,7 @@ from src.routes.files import files_bp
 from src.routes.email import email_bp
 from src.routes.team import team_bp
 from src.utils.errors import register_error_handlers
+from src.middleware.security import register_security_middleware
 
 
 def create_app(config_name='default'):
@@ -35,6 +37,12 @@ def create_app(config_name='default'):
     
     # Load configuration
     app.config.from_object(config[config_name])
+    
+    # Validate environment variables
+    if config_name == 'production':
+        validate_environment('production')
+    else:
+        validate_environment('development')
     
     # Setup logging
     setup_logging(app)
@@ -67,6 +75,9 @@ def create_app(config_name='default'):
     
     # Register error handlers
     register_error_handlers(app)
+    
+    # Register security middleware
+    register_security_middleware(app)
     
     # Register blueprints
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
@@ -108,6 +119,7 @@ def create_app(config_name='default'):
     # JWT error handlers
     @jwt.expired_token_loader
     def expired_token_callback(jwt_header, jwt_payload):
+        """Handle expired JWT tokens"""
         return jsonify({
             'error': 'Token has expired',
             'message': 'Please refresh your token'
@@ -115,6 +127,7 @@ def create_app(config_name='default'):
     
     @jwt.invalid_token_loader
     def invalid_token_callback(error):
+        """Handle invalid JWT tokens"""
         return jsonify({
             'error': 'Invalid token',
             'message': 'Please provide a valid token'
@@ -122,6 +135,7 @@ def create_app(config_name='default'):
     
     @jwt.unauthorized_loader
     def missing_token_callback(error):
+        """Handle missing JWT tokens"""
         return jsonify({
             'error': 'Missing authorization token',
             'message': 'Please provide an access token'
