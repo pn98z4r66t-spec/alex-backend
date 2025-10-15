@@ -22,6 +22,8 @@ from src.routes.auth import auth_bp
 from src.routes.tasks import tasks_bp
 from src.routes.ai import ai_bp
 from src.routes.task_sharing import task_sharing_bp
+from src.routes.task_instance import task_instance_bp
+from src.routes.files import files_bp
 from src.utils.errors import register_error_handlers
 
 
@@ -70,13 +72,8 @@ def create_app(config_name='default'):
     app.register_blueprint(ai_bp, url_prefix='/api/ai')
     app.register_blueprint(task_sharing_bp, url_prefix='/api/tasks')
     
-    # Additional routes would be imported here
-    # from src.routes.emails import emails_bp
-    # from src.routes.files import files_bp
-    # from src.routes.team import team_bp
-    # app.register_blueprint(emails_bp, url_prefix='/api')
-    # app.register_blueprint(files_bp, url_prefix='/api')
-    # app.register_blueprint(team_bp, url_prefix='/api')
+    app.register_blueprint(task_instance_bp, url_prefix="/api")
+    app.register_blueprint(files_bp, url_prefix="/api/files")
     
     # Health check endpoint
     @app.route('/health', methods=['GET'])

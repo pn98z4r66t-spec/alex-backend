@@ -157,3 +157,42 @@ class SharedTaskUpdateSchema(Schema):
     status = fields.Str(validate=validate.OneOf(['todo', 'in-progress', 'done']))
     description = fields.Str(validate=validate.Length(max=1000))
 
+
+
+
+class TaskInstanceSchema(Schema):
+    """Task instance validation schema"""
+    title = fields.Str(
+        required=True,
+        validate=validate.Length(min=1, max=255),
+        error_messages={'required': 'Title is required'}
+    )
+    description = fields.Str(validate=validate.Length(max=5000))
+    status = fields.Str(validate=validate.OneOf(['todo', 'in_progress', 'review', 'done']))
+    priority = fields.Str(validate=validate.OneOf(['low', 'medium', 'high', 'urgent']))
+    supervisor_id = fields.Int(allow_none=True)
+    assignee_id = fields.Int(allow_none=True)
+    due_date = fields.Str(allow_none=True)  # ISO format datetime string
+    ai_enabled = fields.Bool(missing=True)
+
+
+class SubTaskSchema(Schema):
+    """Subtask validation schema"""
+    title = fields.Str(
+        required=True,
+        validate=validate.Length(min=1, max=255),
+        error_messages={'required': 'Title is required'}
+    )
+    description = fields.Str(validate=validate.Length(max=2000))
+    status = fields.Str(validate=validate.OneOf(['todo', 'in_progress', 'done']))
+    assignee_id = fields.Int(allow_none=True)
+    due_date = fields.Str(allow_none=True)  # ISO format datetime string
+
+
+class FileUploadSchema(Schema):
+    """File upload validation schema"""
+    category = fields.Str(validate=validate.OneOf(['images', 'documents', 'data', 'other']))
+    description = fields.Str(validate=validate.Length(max=1000))
+    is_public = fields.Bool(missing=False)
+    task_id = fields.Int(allow_none=True)
+
