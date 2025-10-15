@@ -16,7 +16,7 @@ tasks_bp = Blueprint('tasks', __name__)
 
 @tasks_bp.route('/tasks', methods=['GET'])
 @token_required
-def get_tasks():
+def get_tasks(current_user_id=None):
     """
     Get all tasks with pagination and filtering
     ---
@@ -66,7 +66,7 @@ def get_tasks():
 
 @tasks_bp.route('/tasks/<int:task_id>', methods=['GET'])
 @token_required
-def get_task(task_id):
+def get_task(current_user_id=None, task_id):
     """
     Get specific task by ID
     ---
@@ -84,7 +84,7 @@ def get_task(task_id):
 @tasks_bp.route('/tasks', methods=['POST'])
 @token_required
 @validate_request(TaskSchema)
-def create_task():
+def create_task(current_user_id=None):
     """
     Create a new task
     ---
@@ -133,7 +133,7 @@ def create_task():
 
 @tasks_bp.route('/tasks/<int:task_id>', methods=['PUT'])
 @token_required
-def update_task(task_id):
+def update_task(current_user_id=None, task_id):
     """
     Update an existing task
     ---
@@ -205,7 +205,7 @@ def update_task(task_id):
 
 @tasks_bp.route('/tasks/<int:task_id>', methods=['DELETE'])
 @token_required
-def delete_task(task_id):
+def delete_task(current_user_id=None, task_id):
     """
     Delete a task
     ---

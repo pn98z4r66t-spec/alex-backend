@@ -46,9 +46,9 @@ def register():
     db.session.add(user)
     db.session.commit()
     
-    # Create tokens
-    access_token = create_access_token(identity=user.id)
-    refresh_token = create_refresh_token(identity=user.id)
+    # Create tokens with string identity
+    access_token = create_access_token(identity=str(user.id))
+    refresh_token = create_refresh_token(identity=str(user.id))
     
     return jsonify({
         'message': 'User registered successfully',
@@ -83,9 +83,9 @@ def login():
     user.online = True
     db.session.commit()
     
-    # Create tokens
-    access_token = create_access_token(identity=user.id)
-    refresh_token = create_refresh_token(identity=user.id)
+    # Create tokens with string identity
+    access_token = create_access_token(identity=str(user.id))
+    refresh_token = create_refresh_token(identity=str(user.id))
     
     return jsonify({
         'message': 'Login successful',
@@ -105,6 +105,10 @@ def logout():
     Headers: Authorization: Bearer <token>
     """
     user_id = get_jwt_identity()
+    # Convert to int if string
+    if isinstance(user_id, str):
+        user_id = int(user_id)
+    
     user = User.query.get(user_id)
     
     if user:
@@ -124,49 +128,64 @@ def refresh():
     Headers: Authorization: Bearer <refresh_token>
     """
     user_id = get_jwt_identity()
-    access_token = create_access_token(identity=user_id)
+    # Convert to int if string
+    if isinstance(user_id, str):
+        user_id = int(user_id)
     
-    return jsonify({'access_token': access_token}), 200
+    # Create new access token with string identity
+    access_token = create_access_token(identity=str(user_id))
+    
+    return jsonify({
+        'access_token': access_token
+    }), 200
 
 
 @auth_bp.route('/me', methods=['GET'])
 @jwt_required()
 def get_current_user():
     """
-    Get current user info
+    Get current user information
     ---
     GET /api/auth/me
     Headers: Authorization: Bearer <token>
     """
     user_id = get_jwt_identity()
+    # Convert to int if string
+    if isinstance(user_id, str):
+        user_id = int(user_id)
+    
     user = User.query.get(user_id)
     
     if not user:
         raise AuthenticationError('User not found')
     
-    return jsonify({'user': user.to_dict()}), 200
+    return jsonify(user.to_dict()), 200
 
 
 @auth_bp.route('/me', methods=['PUT'])
 @jwt_required()
-def update_current_user():
+def update_profile():
     """
-    Update current user info
+    Update current user profile
     ---
     PUT /api/auth/me
     Headers: Authorization: Bearer <token>
     {
         "name": "New Name",
-        "role": "Manager"
+        "role": "New Role"
     }
     """
     user_id = get_jwt_identity()
+    # Convert to int if string
+    if isinstance(user_id, str):
+        user_id = int(user_id)
+    
     user = User.query.get(user_id)
     
     if not user:
         raise AuthenticationError('User not found')
     
-    data = request.json
+    data = request.get_json()
     
     if 'name' in data:
         user.name = data['name']
@@ -176,7 +195,7 @@ def update_current_user():
     db.session.commit()
     
     return jsonify({
-        'message': 'User updated successfully',
+        'message': 'Profile updated successfully',
         'user': user.to_dict()
     }), 200
 

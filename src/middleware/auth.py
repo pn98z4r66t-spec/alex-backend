@@ -15,6 +15,12 @@ def token_required(f):
     def decorated(*args, **kwargs):
         try:
             verify_jwt_in_request()
+            # Get user ID and convert to int if it's a string
+            user_id = get_jwt_identity()
+            if isinstance(user_id, str):
+                user_id = int(user_id)
+            # Pass user_id to the function via kwargs
+            kwargs['current_user_id'] = user_id
             return f(*args, **kwargs)
         except NoAuthorizationError:
             return jsonify({'error': 'Missing authorization token'}), 401
@@ -38,10 +44,14 @@ def optional_token(f):
             verify_jwt_in_request(optional=True)
             user_id = get_jwt_identity()
             if user_id:
+                # Convert to int if string
+                if isinstance(user_id, str):
+                    user_id = int(user_id)
                 current_user = User.query.get(user_id)
         except Exception:
             pass
-        return f(*args, current_user=current_user, **kwargs)
+        kwargs['current_user'] = current_user
+        return f(*args, **kwargs)
     return decorated
 
 
@@ -50,7 +60,10 @@ def get_current_user():
     Get the current authenticated user identity
     """
     try:
-        return get_jwt_identity()
+        user_id = get_jwt_identity()
+        if isinstance(user_id, str):
+            user_id = int(user_id)
+        return user_id
     except Exception:
         return None
 
