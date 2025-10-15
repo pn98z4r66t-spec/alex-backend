@@ -106,7 +106,7 @@ def extract_text_from_file(file_path, file_type):
 
 @files_bp.route('/upload', methods=['POST'])
 @token_required
-def upload_file(current_user):
+def upload_file(current_user_id=None):
     """Upload a file to the server"""
     try:
         # Check if file is present
@@ -132,7 +132,7 @@ def upload_file(current_user):
         # Generate unique filename to avoid conflicts
         timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
         name, ext = os.path.splitext(filename)
-        unique_filename = f"{name}_{timestamp}_{current_user.id}{ext}"
+        unique_filename = f"{name}_{timestamp}_{current_user_id}{ext}"
         
         # Save file
         file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
@@ -172,7 +172,7 @@ def upload_file(current_user):
             thumbnail_path=thumbnail_path,
             description=description,
             extracted_text=extracted_text,
-            uploaded_by=current_user.id,
+            uploaded_by=current_user_id,
             task_id=int(task_id) if task_id else None,
             is_public=is_public
         )
@@ -193,7 +193,7 @@ def upload_file(current_user):
 
 @files_bp.route('/list', methods=['GET'])
 @token_required
-def list_files(current_user):
+def list_files(current_user_id=None):
     """List all files accessible to the user"""
     try:
         page = request.args.get('page', 1, type=int)
@@ -204,7 +204,7 @@ def list_files(current_user):
         
         # Base query - user's files or public files
         query = File.query.filter(
-            (File.uploaded_by == current_user.id) | (File.is_public == True)
+            (File.uploaded_by == current_user_id) | (File.is_public == True)
         )
         
         # Apply filters
@@ -249,7 +249,7 @@ def get_file_info(file_id, current_user=None):
             raise APIError('File not found', 404)
         
         # Check access permissions
-        if not file.is_public and (not current_user or file.uploaded_by != current_user.id):
+        if not file.is_public and (not current_user or file.uploaded_by != current_user_id):
             raise APIError('Access denied', 403)
         
         return jsonify(file.to_dict(include_uploader=True)), 200
@@ -271,7 +271,7 @@ def download_file(file_id, current_user=None):
             raise APIError('File not found', 404)
         
         # Check access permissions
-        if not file.is_public and (not current_user or file.uploaded_by != current_user.id):
+        if not file.is_public and (not current_user or file.uploaded_by != current_user_id):
             raise APIError('Access denied', 403)
         
         file_path = os.path.join(UPLOAD_FOLDER, file.file_path)
@@ -308,7 +308,7 @@ def preview_file(file_id, current_user=None):
             raise APIError('File not found', 404)
         
         # Check access permissions
-        if not file.is_public and (not current_user or file.uploaded_by != current_user.id):
+        if not file.is_public and (not current_user or file.uploaded_by != current_user_id):
             raise APIError('Access denied', 403)
         
         file_path = os.path.join(UPLOAD_FOLDER, file.file_path)
@@ -355,7 +355,7 @@ def get_thumbnail(file_id):
 
 @files_bp.route('/<int:file_id>', methods=['DELETE'])
 @token_required
-def delete_file(file_id, current_user):
+def delete_file(file_id, current_user_id=None):
     """Delete a file"""
     try:
         file = File.query.get(file_id)
@@ -364,7 +364,7 @@ def delete_file(file_id, current_user):
             raise APIError('File not found', 404)
         
         # Check permissions
-        if file.uploaded_by != current_user.id:
+        if file.uploaded_by != current_user_id:
             raise APIError('You do not have permission to delete this file', 403)
         
         # Delete physical file
@@ -392,7 +392,7 @@ def delete_file(file_id, current_user):
 
 @files_bp.route('/<int:file_id>/ai-analyze', methods=['POST'])
 @token_required
-def ai_analyze_file(file_id, current_user):
+def ai_analyze_file(file_id, current_user_id=None):
     """Use AI to analyze file content"""
     try:
         file = File.query.get(file_id)
@@ -401,7 +401,7 @@ def ai_analyze_file(file_id, current_user):
             raise APIError('File not found', 404)
         
         # Check access
-        if not file.is_public and file.uploaded_by != current_user.id:
+        if not file.is_public and file.uploaded_by != current_user_id:
             raise APIError('Access denied', 403)
         
         if not file.extracted_text:
@@ -458,7 +458,7 @@ def ai_analyze_file(file_id, current_user):
 
 @files_bp.route('/bulk-upload', methods=['POST'])
 @token_required
-def bulk_upload(current_user):
+def bulk_upload(current_user_id=None):
     """Upload multiple files at once"""
     try:
         if 'files' not in request.files:
@@ -478,7 +478,7 @@ def bulk_upload(current_user):
                 filename = secure_filename(file.filename)
                 timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
                 name, ext = os.path.splitext(filename)
-                unique_filename = f"{name}_{timestamp}_{current_user.id}{ext}"
+                unique_filename = f"{name}_{timestamp}_{current_user_id}{ext}"
                 
                 file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
                 file.save(file_path)
@@ -501,7 +501,7 @@ def bulk_upload(current_user):
                     mime_type=mime_type,
                     file_hash=file_hash,
                     category=category,
-                    uploaded_by=current_user.id
+                    uploaded_by=current_user_id
                 )
                 
                 db.session.add(file_record)

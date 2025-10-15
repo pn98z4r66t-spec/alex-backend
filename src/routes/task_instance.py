@@ -20,7 +20,7 @@ task_instance_bp = Blueprint('task_instance', __name__)
 @task_instance_bp.route('/task-instances', methods=['POST'])
 @token_required
 @validate_request(TaskInstanceSchema())
-def create_task_instance():
+def create_task_instance(current_user_id=None):
     """Create a new task instance with AI integration"""
     user_id = get_jwt_identity()
     data = request.validated_data
@@ -52,7 +52,7 @@ def create_task_instance():
 
 @task_instance_bp.route('/task-instances/<int:task_id>', methods=['GET'])
 @token_required
-def get_task_instance(task_id):
+def get_task_instance(task_id, current_user_id=None):
     """Get full task instance with AI logs and subtasks"""
     user_id = get_jwt_identity()
     
@@ -73,7 +73,7 @@ def get_task_instance(task_id):
 
 @task_instance_bp.route('/task-instances/<int:task_id>/ai/chat', methods=['POST'])
 @token_required
-def task_ai_chat(task_id):
+def task_ai_chat(task_id, current_user_id=None):
     """Chat with task-specific AI that has access to task files"""
     user_id = get_jwt_identity()
     data = request.get_json()
@@ -147,7 +147,7 @@ Task Priority: {task.priority}
 
 @task_instance_bp.route('/task-instances/<int:task_id>/ai/analyze', methods=['POST'])
 @token_required
-def task_ai_analyze(task_id):
+def task_ai_analyze(task_id, current_user_id=None):
     """AI analyzes all task files and provides insights"""
     user_id = get_jwt_identity()
     
@@ -210,7 +210,7 @@ Provide:
 @task_instance_bp.route('/task-instances/<int:task_id>/subtasks', methods=['POST'])
 @token_required
 @validate_request(SubTaskSchema())
-def create_subtask(task_id):
+def create_subtask(task_id, current_user_id=None):
     """Create a subtask"""
     user_id = get_jwt_identity()
     data = request.validated_data

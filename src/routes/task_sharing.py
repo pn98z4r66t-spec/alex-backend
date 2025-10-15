@@ -131,7 +131,7 @@ def send_task_invitation_email(recipient_email, task_title, share_link, sender_n
 @task_sharing_bp.route('/share', methods=['POST'])
 @token_required
 @validate_request(TaskShareSchema)
-def share_task():
+def share_task(current_user_id=None):
     """Create a shareable link for a task and optionally send email invitations"""
     try:
         user_id = get_jwt_identity()
@@ -331,7 +331,7 @@ def update_shared_task(share_token):
 
 @task_sharing_bp.route('/revoke/<share_token>', methods=['DELETE'])
 @token_required
-def revoke_share(share_token):
+def revoke_share(share_token, current_user_id=None):
     """Revoke a share link"""
     try:
         user_id = get_jwt_identity()
@@ -365,7 +365,7 @@ def revoke_share(share_token):
 
 @task_sharing_bp.route('/list/<int:task_id>', methods=['GET'])
 @token_required
-def list_task_shares(task_id):
+def list_task_shares(task_id, current_user_id=None):
     """List all share links for a task"""
     try:
         user_id = get_jwt_identity()

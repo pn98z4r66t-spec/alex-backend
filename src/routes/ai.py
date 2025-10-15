@@ -50,7 +50,7 @@ def call_ollama_api(prompt, model=None, timeout=30):
 @ai_bp.route('/chat', methods=['POST'])
 @token_required
 @validate_request(AIPromptSchema)
-def chat_with_ai():
+def chat_with_ai(current_user_id=None):
     """
     Chat with AI assistant
     ---
@@ -83,7 +83,7 @@ def chat_with_ai():
 
 @ai_bp.route('/agents/<agent_name>', methods=['POST'])
 @token_required
-def execute_agent(agent_name):
+def execute_agent(agent_name, current_user_id=None):
     """
     Execute specialized AI agent
     ---
@@ -170,7 +170,7 @@ Please provide:
 
 @ai_bp.route('/summarize', methods=['POST'])
 @token_required
-def summarize_content():
+def summarize_content(current_user_id=None):
     """
     Summarize text content
     ---
@@ -215,7 +215,7 @@ Summary:'''
 
 @ai_bp.route('/analyze', methods=['POST'])
 @token_required
-def analyze_content():
+def analyze_content(current_user_id=None):
     """
     Analyze content with AI
     ---
