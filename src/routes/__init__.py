@@ -7,6 +7,8 @@ from src.routes.ai import ai_bp
 from src.routes.task_sharing import task_sharing_bp
 from src.routes.task_instance import task_instance_bp
 from src.routes.files import files_bp
+from src.routes.email import email_bp
+from src.routes.team import team_bp
 
 __all__ = [
     'auth_bp',
@@ -15,5 +17,6 @@ __all__ = [
     'task_sharing_bp',
     'task_instance_bp',
     'files_bp',
+    'email_bp',
+    'team_bp',
 ]
-
