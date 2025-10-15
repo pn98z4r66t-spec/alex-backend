@@ -13,7 +13,7 @@ class TaskInstance(db.Model):
     __tablename__ = 'task_instances'
     __table_args__ = (
         db.Index('idx_task_owner', 'owner_id'),
-        db.Index('idx_task_status', 'status'),
+        db.Index('idx_task_instance_status', 'status'),
         db.Index('idx_task_priority', 'priority'),
         db.Index('idx_task_created', 'created_at'),
     )
