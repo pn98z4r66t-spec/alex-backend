@@ -1,0 +1,177 @@
+{
+  "timestamp": "2025-10-17T16:18:54.107513",
+  "tests": [
+    {
+      "category": "System",
+      "name": "Health Check",
+      "status": "PASS",
+      "details": {
+        "status": "healthy",
+        "timestamp": null
+      },
+      "timestamp": "2025-10-17T16:18:54.113591"
+    },
+    {
+      "category": "Authentication",
+      "name": "Login",
+      "status": "PASS",
+      "details": {
+        "user": "Admin User",
+        "role": "Manager"
+      },
+      "timestamp": "2025-10-17T16:18:54.275796"
+    },
+    {
+      "category": "Authentication",
+      "name": "Get Current User",
+      "status": "PASS",
+      "details": {
+        "user_id": 1,
+        "email": "admin@alex.local"
+      },
+      "timestamp": "2025-10-17T16:18:54.284108"
+    },
+    {
+      "category": "Tasks",
+      "name": "List Tasks",
+      "status": "PASS",
+      "details": {
+        "total": 12,
+        "count": 12
+      },
+      "timestamp": "2025-10-17T16:18:54.301517"
+    },
+    {
+      "category": "Tasks",
+      "name": "Create Task",
+      "status": "PASS",
+      "details": {
+        "task_id": 13,
+        "title": "System Test Task"
+      },
+      "timestamp": "2025-10-17T16:18:54.312511"
+    },
+    {
+      "category": "Tasks",
+      "name": "Get Task",
+      "status": "PASS",
+      "details": {
+        "task_id": 13,
+        "status": "todo"
+      },
+      "timestamp": "2025-10-17T16:18:54.319559"
+    },
+    {
+      "category": "Tasks",
+      "name": "Update Task",
+      "status": "PASS",
+      "details": {
+        "task_id": 13
+      },
+      "timestamp": "2025-10-17T16:18:54.327228"
+    },
+    {
+      "category": "Group Chat",
+      "name": "Create/Get Chat",
+      "status": "PASS",
+      "details": {
+        "chat_id": 2,
+        "task_id": 3
+      },
+      "timestamp": "2025-10-17T16:18:54.347772"
+    },
+    {
+      "category": "Group Chat",
+      "name": "Send Message",
+      "status": "PASS",
+      "details": {
+        "message_id": 4
+      },
+      "timestamp": "2025-10-17T16:18:54.370564"
+    },
+    {
+      "category": "Group Chat",
+      "name": "Get Messages",
+      "status": "PASS",
+      "details": {
+        "count": 4,
+        "total": 0
+      },
+      "timestamp": "2025-10-17T16:18:54.385574"
+    },
+    {
+      "category": "Group Chat",
+      "name": "Get Participants",
+      "status": "PASS",
+      "details": {
+        "count": 1
+      },
+      "timestamp": "2025-10-17T16:18:54.394694"
+    },
+    {
+      "category": "AI",
+      "name": "Service Status",
+      "status": "WARN",
+      "details": {
+        "available": false,
+        "provider": "ollama"
+      },
+      "timestamp": "2025-10-17T16:18:54.401791"
+    },
+    {
+      "category": "AI",
+      "name": "Create AI Chat",
+      "status": "PASS",
+      "details": {
+        "ai_chat_id": 2
+      },
+      "timestamp": "2025-10-17T16:18:54.413947"
+    },
+    {
+      "category": "Email",
+      "name": "List Emails",
+      "status": "PASS",
+      "details": {
+        "total": 0,
+        "count": 2
+      },
+      "timestamp": "2025-10-17T16:18:54.425676"
+    },
+    {
+      "category": "Team",
+      "name": "List Members",
+      "status": "PASS",
+      "details": {
+        "total": 8,
+        "count": 8
+      },
+      "timestamp": "2025-10-17T16:18:54.432209"
+    },
+    {
+      "category": "Team",
+      "name": "Get Statistics",
+      "status": "PASS",
+      "details": {
+        "total_members": 0,
+        "online_members": 0
+      },
+      "timestamp": "2025-10-17T16:18:54.448556"
+    },
+    {
+      "category": "Files",
+      "name": "List Files",
+      "status": "PASS",
+      "details": {
+        "total": 0,
+        "count": 0
+      },
+      "timestamp": "2025-10-17T16:18:54.460135"
+    }
+  ],
+  "summary": {
+    "total": 17,
+    "passed": 16,
+    "failed": 0,
+    "warnings": 1
+  }
+}
