@@ -29,6 +29,7 @@ from src.routes.email import email_bp
 from src.routes.team import team_bp
 from src.routes.task_chat import task_chat_bp
 from src.routes.ai_chat import ai_chat_bp
+from src.routes.users import users_bp
 from src.utils.errors import register_error_handlers
 from src.middleware.security import register_security_middleware
 
@@ -93,6 +94,7 @@ def create_app(config_name='default'):
     app.register_blueprint(team_bp, url_prefix="/api")
     app.register_blueprint(task_chat_bp, url_prefix="/api")
     app.register_blueprint(ai_chat_bp, url_prefix="/api")
+    app.register_blueprint(users_bp, url_prefix="/api/users")
     
     # Health check endpoint
     @app.route('/health', methods=['GET'])

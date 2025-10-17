@@ -120,10 +120,7 @@ def create_task(current_user_id=None):
         
         logger.info(f'Task created: {new_task.id} - {new_task.title}')
         
-        return jsonify({
-            'message': 'Task created successfully',
-            'task': new_task.to_dict(include_relations=True)
-        }), 201
+        return jsonify(new_task.to_dict(include_relations=True)), 201
         
     except Exception as e:
         db.session.rollback()
