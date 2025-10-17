@@ -4,6 +4,9 @@ Handles group chat functionality for task boards
 """
 from flask import Blueprint, request, jsonify
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 from sqlalchemy import or_
 
 from ..models.models import db, User, Task

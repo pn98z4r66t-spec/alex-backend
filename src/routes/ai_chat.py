@@ -4,6 +4,9 @@ Handles private 1-to-1 chat with AI assistant that can read group chat history
 """
 from flask import Blueprint, request, jsonify
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 import os
 import requests
 import time
