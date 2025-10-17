@@ -8,6 +8,7 @@ import time
 from typing import Dict, Any, Optional
 from flask import current_app
 from .ai_providers.ollama import OllamaProvider
+from .ai_providers.lmstudio import LMStudioProvider
 from .prompts import PromptTemplates
 from src.utils.errors import APIError
 
@@ -109,6 +110,15 @@ class AIService:
                 'timeout': current_app.config.get('AI_TIMEOUT', 30)
             }
             return OllamaProvider(config)
+        elif provider_name == 'lmstudio':
+            config = {
+                'api_url': current_app.config.get('AI_API_URL', 'http://localhost:1234/v1'),
+                'default_model': current_app.config.get('AI_MODEL', 'local-model'),
+                'timeout': current_app.config.get('AI_TIMEOUT', 60),
+                'temperature': current_app.config.get('AI_TEMPERATURE', 0.7),
+                'max_tokens': current_app.config.get('AI_MAX_TOKENS', 2048)
+            }
+            return LMStudioProvider(config)
         else:
             raise ValueError(f'Unknown AI provider: {provider_name}')
     
