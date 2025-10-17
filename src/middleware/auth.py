@@ -51,6 +51,7 @@ def optional_token(f):
                     user_id = int(user_id)
                 current_user = User.query.get(user_id)
         except Exception:
+            logger.debug(f"Exception handled: {str(e)}")
             pass
         kwargs['current_user'] = current_user
         return f(*args, **kwargs)

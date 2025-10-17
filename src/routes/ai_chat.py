@@ -241,6 +241,7 @@ def _user_has_task_access(user_id, task):
                     if int(c) == user_id:
                         return True
                 except (ValueError, TypeError):
+                    logger.debug(f"Exception handled: {str(e)}")
                     pass
             elif hasattr(c, 'id') and c.id == user_id:
                 return True
