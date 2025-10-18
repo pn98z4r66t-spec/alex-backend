@@ -21,6 +21,12 @@ class Config:
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or os.urandom(24)
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
+    JWT_TOKEN_LOCATION = ['cookies']
+    JWT_COOKIE_SECURE = False  # Set to True in production with HTTPS
+    JWT_COOKIE_CSRF_PROTECT = False  # Disable CSRF for API usage
+    JWT_COOKIE_SAMESITE = 'Lax'
+    JWT_ACCESS_COOKIE_NAME = 'access_token'
+    JWT_REFRESH_COOKIE_NAME = 'refresh_token'
     
     # CORS Configuration
     CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:5173').split(',')
@@ -54,6 +60,9 @@ class ProductionConfig(Config):
     SESSION_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
+    
+    # JWT cookies must be secure in production
+    JWT_COOKIE_SECURE = True
 
 
 class TestingConfig(Config):

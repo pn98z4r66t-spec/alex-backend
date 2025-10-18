@@ -1,12 +1,12 @@
 """
-Authentication routes
+Authentication routes with httpOnly cookie support
 """
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, make_response
 from flask_jwt_extended import (
     create_access_token, create_refresh_token,
-    jwt_required, get_jwt_identity
+    jwt_required, get_jwt_identity, unset_jwt_cookies
 )
-from datetime import datetime
+from datetime import datetime, timedelta
 from src.models.models import db, User
 from src.utils.validation import validate_request, LoginSchema, RegisterSchema
 from src.utils.errors import AuthenticationError, ValidationError, ConflictError
@@ -27,6 +27,8 @@ def register():
         "password": "securepassword",
         "role": "Developer"
     }
+    
+    Returns tokens in httpOnly cookies for security
     """
     data = request.validated_data
     
@@ -50,12 +52,33 @@ def register():
     access_token = create_access_token(identity=str(user.id))
     refresh_token = create_refresh_token(identity=str(user.id))
     
-    return jsonify({
+    # Create response with httpOnly cookies
+    response = make_response(jsonify({
         'message': 'User registered successfully',
-        'user': user.to_dict(),
-        'access_token': access_token,
-        'refresh_token': refresh_token
-    }), 201
+        'user': user.to_dict()
+    }), 201)
+    
+    # Set access token cookie (httpOnly, secure in production)
+    response.set_cookie(
+        'access_token',
+        value=access_token,
+        httponly=True,
+        secure=request.is_secure,  # True in production with HTTPS
+        samesite='Lax',
+        max_age=timedelta(hours=1)
+    )
+    
+    # Set refresh token cookie (httpOnly, secure in production)
+    response.set_cookie(
+        'refresh_token',
+        value=refresh_token,
+        httponly=True,
+        secure=request.is_secure,
+        samesite='Lax',
+        max_age=timedelta(days=30)
+    )
+    
+    return response
 
 
 @auth_bp.route('/login', methods=['POST'])
@@ -69,6 +92,8 @@ def login():
         "email": "john@example.com",
         "password": "securepassword"
     }
+    
+    Returns tokens in httpOnly cookies for security
     """
     data = request.validated_data
     
@@ -87,12 +112,33 @@ def login():
     access_token = create_access_token(identity=str(user.id))
     refresh_token = create_refresh_token(identity=str(user.id))
     
-    return jsonify({
+    # Create response with httpOnly cookies
+    response = make_response(jsonify({
         'message': 'Login successful',
-        'user': user.to_dict(),
-        'access_token': access_token,
-        'refresh_token': refresh_token
-    }), 200
+        'user': user.to_dict()
+    }), 200)
+    
+    # Set access token cookie (httpOnly, secure in production)
+    response.set_cookie(
+        'access_token',
+        value=access_token,
+        httponly=True,
+        secure=request.is_secure,
+        samesite='Lax',
+        max_age=timedelta(hours=1)
+    )
+    
+    # Set refresh token cookie (httpOnly, secure in production)
+    response.set_cookie(
+        'refresh_token',
+        value=refresh_token,
+        httponly=True,
+        secure=request.is_secure,
+        samesite='Lax',
+        max_age=timedelta(days=30)
+    )
+    
+    return response
 
 
 @auth_bp.route('/logout', methods=['POST'])
@@ -102,7 +148,9 @@ def logout():
     Logout user
     ---
     POST /api/auth/logout
-    Headers: Authorization: Bearer <token>
+    Cookies: access_token (httpOnly)
+    
+    Clears authentication cookies
     """
     user_id = get_jwt_identity()
     # Convert to int if string
@@ -115,7 +163,14 @@ def logout():
         user.online = False
         db.session.commit()
     
-    return jsonify({'message': 'Logout successful'}), 200
+    # Create response and clear cookies
+    response = make_response(jsonify({'message': 'Logout successful'}), 200)
+    
+    # Clear both tokens
+    response.set_cookie('access_token', '', expires=0, httponly=True, secure=request.is_secure, samesite='Lax')
+    response.set_cookie('refresh_token', '', expires=0, httponly=True, secure=request.is_secure, samesite='Lax')
+    
+    return response
 
 
 @auth_bp.route('/refresh', methods=['POST'])
@@ -125,7 +180,9 @@ def refresh():
     Refresh access token
     ---
     POST /api/auth/refresh
-    Headers: Authorization: Bearer <refresh_token>
+    Cookies: refresh_token (httpOnly)
+    
+    Returns new access token in httpOnly cookie
     """
     user_id = get_jwt_identity()
     # Convert to int if string
@@ -135,9 +192,21 @@ def refresh():
     # Create new access token with string identity
     access_token = create_access_token(identity=str(user_id))
     
-    return jsonify({
-        'access_token': access_token
-    }), 200
+    # Create response with new access token cookie
+    response = make_response(jsonify({
+        'message': 'Token refreshed successfully'
+    }), 200)
+    
+    response.set_cookie(
+        'access_token',
+        value=access_token,
+        httponly=True,
+        secure=request.is_secure,
+        samesite='Lax',
+        max_age=timedelta(hours=1)
+    )
+    
+    return response
 
 
 @auth_bp.route('/me', methods=['GET'])
@@ -147,7 +216,7 @@ def get_current_user():
     Get current user information
     ---
     GET /api/auth/me
-    Headers: Authorization: Bearer <token>
+    Cookies: access_token (httpOnly)
     """
     user_id = get_jwt_identity()
     # Convert to int if string
@@ -169,7 +238,7 @@ def update_profile():
     Update current user profile
     ---
     PUT /api/auth/me
-    Headers: Authorization: Bearer <token>
+    Cookies: access_token (httpOnly)
     {
         "name": "New Name",
         "role": "New Role"
