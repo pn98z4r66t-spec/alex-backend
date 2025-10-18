@@ -19,6 +19,7 @@ from ..models.models import db, File, User
 from ..middleware.auth import token_required, optional_token
 from ..utils.validation import validate_request, FileUploadSchema
 from ..utils.errors import APIError
+from ..services.document_parsers import DocumentParserService
 
 files_bp = Blueprint('files', __name__)
 
@@ -81,20 +82,15 @@ def generate_thumbnail(file_path, thumbnail_path, size=(200, 200)):
 def extract_text_from_file(file_path, file_type):
     """Extract text content from various file types for AI processing"""
     try:
-        if file_type == 'pdf':
-            with open(file_path, 'rb') as f:
-                reader = PyPDF2.PdfReader(f)
-                text = ''
-                for page in reader.pages:
-                    text += page.extract_text() + '\n'
-                return text[:10000]  # Limit to first 10k chars
+        # Use new document parser service for office documents
+        file_ext = f'.{file_type}'
+        if DocumentParserService.is_supported(file_ext):
+            parsed_data = DocumentParserService.parse_document(file_path, file_ext)
+            if parsed_data.get('success'):
+                return parsed_data.get('text', '')[:10000]
         
-        elif file_type in ['doc', 'docx']:
-            doc = docx.Document(file_path)
-            text = '\n'.join([para.text for para in doc.paragraphs])
-            return text[:10000]
-        
-        elif file_type in ['txt', 'md', 'json', 'xml', 'yaml', 'yml', 'py', 'js', 'html', 'css']:
+        # Fallback for other text files
+        if file_type in ['txt', 'md', 'json', 'xml', 'yaml', 'yml', 'py', 'js', 'html', 'css']:
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 return f.read()[:10000]
         

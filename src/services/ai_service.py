@@ -247,6 +247,20 @@ class AIService:
         )
         return self.chat(prompt, use_cache=False, **kwargs)
     
+    def generate_response(self, prompt: str, **kwargs) -> str:
+        """
+        Generate a simple text response from AI
+        
+        Args:
+            prompt: The prompt
+            **kwargs: Additional parameters
+            
+        Returns:
+            AI response text (string)
+        """
+        response = self.chat(prompt, **kwargs)
+        return response.get('response', response.get('content', 'No response generated'))
+    
     def is_available(self) -> bool:
         """Check if AI service is available"""
         return self.provider.is_available()
