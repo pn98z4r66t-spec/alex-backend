@@ -36,9 +36,15 @@ class Config:
     RATELIMIT_DEFAULT = "200 per day;50 per hour"
     
     # AI Configuration
+    AI_PROVIDER = os.environ.get('AI_PROVIDER', 'ollama')  # 'ollama', 'lmstudio', or 'openai'
     AI_API_URL = os.environ.get('AI_API_URL', 'http://localhost:11434/api/generate')
     AI_MODEL = os.environ.get('AI_MODEL', 'phi3')
     AI_TIMEOUT = int(os.environ.get('AI_TIMEOUT', '30'))
+    AI_TEMPERATURE = float(os.environ.get('AI_TEMPERATURE', '0.7'))
+    AI_MAX_TOKENS = int(os.environ.get('AI_MAX_TOKENS', '2048'))
+    
+    # OpenAI Configuration (when AI_PROVIDER='openai')
+    OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
     
     # Logging
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
