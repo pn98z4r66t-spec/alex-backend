@@ -28,15 +28,27 @@ def chat_with_ai(current_user_id=None):
     """
     data = request.validated_data
     user_message = data.get('message', '')
+    session_id = data.get('session_id')  # Optional session ID for conversation continuity
     
     try:
         ai_service = get_ai_service()
-        response = ai_service.chat(user_message)
+        
+        # Use memory-aware chat if user is authenticated
+        if current_user_id:
+            response = ai_service.chat_with_memory(
+                user_id=current_user_id,
+                message=user_message,
+                session_id=session_id
+            )
+        else:
+            # Fallback to regular chat without memory
+            response = ai_service.chat(user_message)
         
         return jsonify({
-            'message': response.get('response', ''),
+            'message': response.get('message', response.get('response', '')),
             'model': response.get('model', 'unknown'),
             'provider': response.get('provider', 'unknown'),
+            'session_id': session_id,
             'success': True
         }), 200
         

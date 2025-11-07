@@ -6,13 +6,14 @@ import logging
 import os
 import hashlib
 import time
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from flask import current_app
 from .ai_providers.ollama import OllamaProvider
 from .ai_providers.lmstudio import LMStudioProvider
 from .ai_providers.openai_provider import OpenAIProvider
 from .prompts import PromptTemplates
 from src.utils.errors import APIError
+from .memory_service import MemoryService
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +107,7 @@ class AIService:
         self.cache = AICache() if enable_cache else None
         self.provider = self._initialize_provider(provider)
         self.prompts = PromptTemplates
+        self.memory_service = MemoryService()
     
     def _initialize_provider(self, provider_name: str):
         """Initialize the AI provider"""
@@ -311,4 +313,114 @@ def get_ai_service() -> AIService:
     if _ai_service is None:
         _ai_service = AIService()
     return _ai_service
+
+
+
+    def chat_with_memory(self, user_id: int, message: str, session_id: Optional[str] = None, 
+                        model: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+        """
+        Chat with AI using memory context
+        
+        Args:
+            user_id: User ID for memory context
+            message: User's message
+            session_id: Optional session ID for conversation continuity
+            model: Optional model override
+            **kwargs: Additional parameters
+            
+        Returns:
+            AI response dict with memory context
+        """
+        # Build context from memory
+        context = self.memory_service.build_ai_context(user_id, message, session_id)
+        
+        # Format context for AI
+        context_str = self.memory_service.format_context_for_ai(context)
+        
+        # Build enhanced prompt with context
+        enhanced_prompt = f"""You are Alex, an AI Corporate Butler assistant. You have access to the user's context and history.
+
+{context_str}
+
+Current Question: {message}
+
+Please provide a helpful, detailed response that takes into account the user's context, preferences, and history. Be specific and actionable."""
+        
+        # Get AI response
+        response = self.chat(enhanced_prompt, model, use_cache=False, **kwargs)
+        
+        # Save conversation to memory
+        self.memory_service.save_conversation(
+            user_id=user_id,
+            role='user',
+            message=message,
+            session_id=session_id
+        )
+        
+        self.memory_service.save_conversation(
+            user_id=user_id,
+            role='assistant',
+            message=response.get('message', ''),
+            session_id=session_id,
+            tokens_used=response.get('tokens_used', 0)
+        )
+        
+        # Extract and save any new insights or preferences from the conversation
+        self._extract_and_save_insights(user_id, message, response.get('message', ''))
+        
+        return response
+    
+    def _extract_and_save_insights(self, user_id: int, user_message: str, ai_response: str):
+        """Extract and save insights from conversation"""
+        # Simple keyword-based insight extraction
+        # This can be enhanced with more sophisticated NLP
+        
+        # Detect preferences
+        preference_keywords = ['prefer', 'like', 'want', 'need', 'always', 'usually']
+        if any(keyword in user_message.lower() for keyword in preference_keywords):
+            # Extract preference (simplified)
+            self.memory_service.save_memory(
+                user_id=user_id,
+                memory_type='preference',
+                key='communication_style',
+                value='detailed_analysis',
+                confidence=0.7
+            )
+        
+        # Detect goals
+        goal_keywords = ['goal', 'objective', 'aim', 'target', 'want to achieve']
+        if any(keyword in user_message.lower() for keyword in goal_keywords):
+            # This is a simplified version - can be enhanced
+            pass
+    
+    def get_conversation_history(self, user_id: int, limit: int = 20, 
+                                session_id: Optional[str] = None) -> List[Dict]:
+        """
+        Get conversation history for a user
+        
+        Args:
+            user_id: User ID
+            limit: Number of recent conversations to retrieve
+            session_id: Optional session ID filter
+            
+        Returns:
+            List of conversation dictionaries
+        """
+        return self.memory_service.get_recent_conversations(user_id, limit, session_id)
+    
+    def clear_conversation_history(self, user_id: int, session_id: str):
+        """Clear conversation history for a session"""
+        self.memory_service.clear_session(user_id, session_id)
+    
+    def get_user_memories(self, user_id: int) -> Dict:
+        """Get all memories for a user"""
+        return self.memory_service.get_all_memories(user_id)
+    
+    def save_user_memory(self, user_id: int, memory_type: str, key: str, value: str):
+        """Save a user memory"""
+        return self.memory_service.save_memory(user_id, memory_type, key, value)
+    
+    def get_memory_stats(self, user_id: int) -> Dict:
+        """Get memory statistics for a user"""
+        return self.memory_service.get_memory_stats(user_id)
 

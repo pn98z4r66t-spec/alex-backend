@@ -338,3 +338,116 @@ class File(db.Model):
             size /= 1024.0
         return f"{size:.1f} TB"
 
+
+
+
+class ConversationHistory(db.Model):
+    """Store conversation history for context and memory"""
+    __tablename__ = 'conversation_history'
+    __table_args__ = (
+        db.Index('idx_conv_user', 'user_id'),
+        db.Index('idx_conv_session', 'session_id'),
+        db.Index('idx_conv_created', 'created_at'),
+    )
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    session_id = db.Column(db.String(255), index=True)
+    role = db.Column(db.String(50), nullable=False)  # 'user' or 'assistant'
+    message = db.Column(db.Text, nullable=False)
+    tokens_used = db.Column(db.Integer)
+    context_summary = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    
+    # Relationship
+    user = db.relationship('User', backref=db.backref('conversations', lazy='dynamic'))
+    
+    def to_dict(self):
+        """Convert to dictionary"""
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'session_id': self.session_id,
+            'role': self.role,
+            'message': self.message,
+            'tokens_used': self.tokens_used,
+            'context_summary': self.context_summary,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
+class UserMemory(db.Model):
+    """Store long-term user memories, preferences, and patterns"""
+    __tablename__ = 'user_memory'
+    __table_args__ = (
+        db.Index('idx_memory_user', 'user_id'),
+        db.Index('idx_memory_type', 'memory_type'),
+        db.Index('idx_memory_key', 'key'),
+        db.UniqueConstraint('user_id', 'memory_type', 'key', name='unique_user_memory'),
+    )
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    memory_type = db.Column(db.String(50), nullable=False, index=True)  # 'preference', 'pattern', 'insight', 'goal'
+    key = db.Column(db.String(255), nullable=False, index=True)
+    value = db.Column(db.Text, nullable=False)
+    confidence = db.Column(db.Float, default=1.0)
+    last_accessed = db.Column(db.DateTime)
+    access_count = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationship
+    user = db.relationship('User', backref=db.backref('memories', lazy='dynamic'))
+    
+    def to_dict(self):
+        """Convert to dictionary"""
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'memory_type': self.memory_type,
+            'key': self.key,
+            'value': self.value,
+            'confidence': self.confidence,
+            'last_accessed': self.last_accessed.isoformat() if self.last_accessed else None,
+            'access_count': self.access_count,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+
+class ContextSummary(db.Model):
+    """Store summarized context for different time periods and projects"""
+    __tablename__ = 'context_summary'
+    __table_args__ = (
+        db.Index('idx_summary_user', 'user_id'),
+        db.Index('idx_summary_type', 'summary_type'),
+        db.Index('idx_summary_date', 'date'),
+    )
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    summary_type = db.Column(db.String(50), nullable=False, index=True)  # 'daily', 'weekly', 'project'
+    title = db.Column(db.String(255), nullable=False)
+    summary = db.Column(db.Text, nullable=False)
+    meta_data = db.Column(db.Text)  # JSON string (renamed from metadata to avoid conflict)
+    date = db.Column(db.Date, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationship
+    user = db.relationship('User', backref=db.backref('context_summaries', lazy='dynamic'))
+    
+    def to_dict(self):
+        """Convert to dictionary"""
+        import json
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'summary_type': self.summary_type,
+            'title': self.title,
+            'summary': self.summary,
+            'metadata': json.loads(self.meta_data) if self.meta_data else {},
+            'date': self.date.isoformat() if self.date else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
