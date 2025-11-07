@@ -3,6 +3,7 @@ AI Service
 Unified interface for all AI interactions
 """
 import logging
+import os
 import hashlib
 import time
 from typing import Dict, Any, Optional
@@ -98,7 +99,7 @@ class AIService:
         """
         # Use provider from config if not specified
         if provider is None:
-            provider = current_app.config.get('AI_PROVIDER', 'ollama')
+            provider = current_app.config.get("AI_PROVIDER", os.getenv("AI_PROVIDER", "ollama"))
         
         self.provider_name = provider
         self.enable_cache = enable_cache
@@ -126,7 +127,7 @@ class AIService:
             return LMStudioProvider(config)
         elif provider_name == 'openai':
             config = {
-                'api_key': current_app.config.get('OPENAI_API_KEY'),
+                'api_key': current_app.config.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY")),
                 'default_model': current_app.config.get('AI_MODEL', 'gpt-3.5-turbo'),
                 'timeout': current_app.config.get('AI_TIMEOUT', 30),
                 'temperature': current_app.config.get('AI_TEMPERATURE', 0.7),
