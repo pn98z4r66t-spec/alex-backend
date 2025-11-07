@@ -49,7 +49,7 @@ class TaskSchema(Schema):
     status = fields.Str(validate=validate.OneOf(['todo', 'in-progress', 'done']))
     urgent = fields.Bool()
     deadline = fields.DateTime(allow_none=True)
-    assignee_id = fields.Int(required=True)
+    assignee_id = fields.Int(required=False, allow_none=True)
     supervisor_id = fields.Int(allow_none=True)
     collaborators = fields.List(fields.Int())
 

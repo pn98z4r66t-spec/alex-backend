@@ -110,7 +110,7 @@ def create_task(current_user_id=None):
             status=data.get('status', 'todo'),
             urgent=data.get('urgent', False),
             deadline=data.get('deadline'),
-            assignee_id=data['assignee_id'],
+            assignee_id=data.get('assignee_id', current_user_id),
             supervisor_id=data.get('supervisor_id'),
             collaborators=','.join(map(str, data.get('collaborators', [])))
         )

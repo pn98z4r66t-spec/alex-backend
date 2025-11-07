@@ -33,8 +33,8 @@ def chat_with_ai(current_user_id=None):
     try:
         ai_service = get_ai_service()
         
-        # Use memory-aware chat if user is authenticated
-        if current_user_id:
+        # Use memory-aware chat if user is authenticated and method exists
+        if current_user_id and hasattr(ai_service, 'chat_with_memory'):
             response = ai_service.chat_with_memory(
                 user_id=current_user_id,
                 message=user_message,

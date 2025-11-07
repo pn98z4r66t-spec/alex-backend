@@ -29,7 +29,8 @@ class Config:
     JWT_REFRESH_COOKIE_NAME = 'refresh_token'
     
     # CORS Configuration
-    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:5173').split(',')
+    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 
+        'http://localhost:5173,http://localhost:8080,https://8080-io9bn5cim3hp31f5laiob-c75ab74f.manusvm.computer').split(',')
     
     # Rate Limiting
     RATELIMIT_STORAGE_URL = os.environ.get('REDIS_URL') or 'memory://'
